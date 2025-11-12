@@ -78,29 +78,30 @@
       list-style-type: none;
     }
 
-    iframe {
-      width: 100%;
-      height: 600px;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      margin-top: 0.75rem;
-      display: none;
-      background-color: #fff;
+    /* Modal viewer styles */
+    .modal-dialog {
+      max-width: 90%;
+      width: 90%;
+      margin: 20px;
+    }
+    
+    .modal-content {
+      height: 90vh;
     }
 
-    /* Light mode scrollbar styling */
-    ::-webkit-scrollbar {
-      width: 8px;
+    .modal-body {
+      padding: 0;
+      height: calc(100% - 2rem);
     }
-    ::-webkit-scrollbar-track {
-      background: #f0f0f0;
+
+    .modal-header {
+      height: 2rem;
     }
-    ::-webkit-scrollbar-thumb {
-      background: #ccc;
-      border-radius: 4px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #aaa;
+
+    #pdf-viewer {
+      width: 100%;
+      height: 100%;
+      border: none;
     }
   </style>
 </head>
@@ -110,6 +111,21 @@
 
   <div class="accordion" id="fileAccordion">
     <div id="file-list">Loading...</div>
+  </div>
+
+  <!-- Bootstrap Modal -->
+  <div class="modal fade" id="pdfModal" tabindex="-1" aria-labelledby="pdfModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="pdfModalLabel">View PDF</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <iframe id="pdf-viewer"></iframe>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Bootstrap JS -->
@@ -156,13 +172,13 @@
             <div class="accordion-body">
               <ul class="list-unstyled mb-3">
                 ${folders[folder]
-                  .map(f => `
+                  .map((f, i, arr) => `
                     <li>
                       <a class="pdf-link" data-folder="${folder}" data-file="${f}">
                         ${f}
                       </a>
-                      <iframe class="pdf-frame"></iframe>
                     </li>
+                    ${i < arr.length - 1 ? '<hr class="my-2">' : ''}
                   `)
                   .join("")}
               </ul>
@@ -172,24 +188,26 @@
         accordion.appendChild(accordionItem);
       });
 
-      // Add click handlers for links
+      const modal = new bootstrap.Modal(document.getElementById("pdfModal"));
+      const pdfFrame = document.getElementById("pdf-viewer");
+      const pdfModalTitle = document.getElementById("pdfModalLabel");
+
       document.querySelectorAll(".pdf-link").forEach(link => {
         link.addEventListener("click", e => {
           e.preventDefault();
           const folder = link.dataset.folder;
           const file = link.dataset.file;
-          const iframe = link.parentElement.querySelector(".pdf-frame");
-          const fileUrl = `https://dlfoundry.github.io/SDS-links/${folder}/${file}`;
+          const pdfUrl = `https://dlfoundry.github.io/SDS-links/${folder}/${file}`;
+          const viewerUrl = `https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(pdfUrl)}`;
 
-          // Toggle iframe visibility and load
-          if (iframe.style.display === "none" || iframe.src !== fileUrl) {
-            iframe.src = fileUrl;
-            iframe.style.display = "block";
-          } else {
-            iframe.style.display = "none";
-            iframe.src = "";
-          }
+          pdfModalTitle.textContent = file;
+          pdfFrame.src = viewerUrl;
+          modal.show();
         });
+      });
+
+      document.getElementById("pdfModal").addEventListener("hidden.bs.modal", () => {
+        pdfFrame.src = "";
       });
     }
 
