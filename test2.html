@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SDS Links</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 text-gray-900 font-sans p-8">
+
+  <h1 class="text-center text-3xl font-bold text-gray-700 mb-8">
+    SDS Links
+  </h1>
+
+  <div id="fileAccordion" class="space-y-4">
+    <div id="file-list" class="text-gray-500">Loading...</div>
+  </div>
+
+  <script>
+    async function fetchRepoFiles() {
+      const repo = "dlfoundry/SDS-links";
+      const api = `https://api.github.com/repos/${repo}/git/trees/main?recursive=1`;
+      const res = await fetch(api);
+      const data = await res.json();
+      const files = data.tree
+        .filter(f => f.path.toLowerCase().endsWith(".pdf"))
+        .map(f => f.path);
+
+      const folders = {};
+      files.forEach(path => {
+        const [folder, file] = path.split("/");
+        if (!folders[folder]) folders[folder] = [];
+        folders[folder].push(file);
+      });
+
+      const container = document.getElementById("file-list");
+      container.innerHTML = "";
+
+      const accordion = document.getElementById("fileAccordion");
+
+      Object.keys(folders).sort().forEach((folder, index) => {
+        const folderId = `folder-${index}`;
+
+        const accordionItem = document.createElement("div");
+        accordionItem.className = "border border-gray-300 rounded-lg bg-white shadow";
+
+        accordionItem.innerHTML = `
+          <h2>
+            <button class="w-full text-left px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-t-lg focus:outline-none"
+              type="button" data-toggle="collapse" data-target="#collapse-${folderId}">
+              ${folder}
+            </button>
+          </h2>
+          <div id="collapse-${folderId}" class="hidden">
+            <div class="px-4 py-3 bg-gray-50">
+              <ul class="list-disc pl-6 space-y-1">
+                ${folders[folder]
+                  .map(
+                    f => `
+                      <li>
+                        <a class="pdf-link text-blue-600 hover:underline cursor-pointer" 
+                           data-folder="${folder}" data-file="${f}">
+                          ${f}
+                        </a>
+                      </li>`
+                  )
+                  .join("")}
+              </ul>
+              <iframe id="iframe-${folderId}" src="" class="w-full h-[600px] border mt-4 hidden bg-gray-200"></iframe>
+            </div>
+          </div>
+        `;
+        accordion.appendChild(accordionItem);
+
+        // Toggle collapse manually (since Bootstrap is removed)
+        const button = accordionItem.querySelector("button");
+        const collapse = accordionItem.querySelector(`#collapse-${folderId}`);
+        button.addEventListener("click", () => {
+          collapse.classList.toggle("hidden");
+        });
+      });
+
+      // Add click handlers for links
+      document.querySelectorAll(".pdf-link").forEach(link => {
+        link.addEventListener("click", e => {
+          e.preventDefault();
+          const folder = link.dataset.folder;
+          const file = link.dataset.file;
+          const iframe = link.closest("div").querySelector("iframe");
+          const fileUrl = `viewer.html?file=${folder}/${file}`;
+          iframe.src = fileUrl;
+          iframe.classList.remove("hidden");
+        });
+      });
+    }
+
+    fetchRepoFiles().catch(err => {
+      document.getElementById("file-list").textContent =
+        "Error loading files: " + err.message;
+    });
+  </script>
+</body>
+</html>
